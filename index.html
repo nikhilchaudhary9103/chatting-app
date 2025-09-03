@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Public Chat</title>
+</head>
+<body>
+  <h3>🔥 Public Chat</h3>
+  <div id="chat-box" style="height:300px;overflow-y:auto;border:1px solid black;"></div>
+  
+  <input id="msgInput" type="text" placeholder="Type message">
+  <button onclick="sendMessage()">Send</button>
+  <button onclick="resetChat()">Reset</button>
+
+  <hr>
+  <h4>🔎 Private Chat</h4>
+  <input id="searchUser" type="text" placeholder="Enter username">
+  <button onclick="goPrivate()">Chat</button>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDgD17HehIZ3RXWy9B6RbYT2Bl4HTZZzfI",
+      authDomain: "cloudstorage-bf72f.firebaseapp.com",
+      databaseURL: "https://cloudstorage-bf72f-default-rtdb.firebaseio.com",
+      projectId: "cloudstorage-bf72f",
+      storageBucket: "cloudstorage-bf72f.appspot.com",
+      messagingSenderId: "584369536278",
+      appId: "1:584369536278:web:21af80b8e3f4dd4e7a2189"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const chatRef = ref(db, "publicChat");
+
+    const chatBox = document.getElementById("chat-box");
+    const msgInput = document.getElementById("msgInput");
+
+    async function sendMessage() {
+      let text = msgInput.value.trim();
+      if (text) {
+        push(chatRef, { text });
+        msgInput.value = "";
+      }
+    }
+
+    onChildAdded(chatRef, (data) => {
+      const div = document.createElement("div");
+      div.textContent = data.val().text;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    function resetChat() {
+      remove(chatRef);
+      chatBox.innerHTML = "";
+    }
+
+    function goPrivate() {
+      const user = document.getElementById("searchUser").value.trim();
+      if(user){
+        window.location.href = "private.html?user=" + encodeURIComponent(user);
+      }
+    }
+
+    window.sendMessage = sendMessage;
+    window.resetChat = resetChat;
+    window.goPrivate = goPrivate;
+  </script>
+</body>
+  </html>
