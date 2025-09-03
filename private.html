@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Private Chat</title>
+</head>
+<body>
+  <h3>🔒 Private Chat</h3>
+  <div id="loginDiv">
+    <p>Enter Username:</p>
+    <input id="username" type="text"><br><br>
+    <p>Enter Password:</p>
+    <input id="password" type="password"><br><br>
+    <button onclick="login()">Login</button>
+  </div>
+
+  <div id="chatDiv" style="display:none;">
+    <h4 id="chatWith"></h4>
+    <div id="chat-box" style="height:300px;overflow-y:auto;border:1px solid black;"></div>
+    <input id="msgInput" type="text" placeholder="Type message">
+    <button onclick="sendMessage()">Send</button>
+    <button onclick="resetChat()">Reset</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDgD17HehIZ3RXWy9B6RbYT2Bl4HTZZzfI",
+      authDomain: "cloudstorage-bf72f.firebaseapp.com",
+      databaseURL: "https://cloudstorage-bf72f-default-rtdb.firebaseio.com",
+      projectId: "cloudstorage-bf72f",
+      storageBucket: "cloudstorage-bf72f.appspot.com",
+      messagingSenderId: "584369536278",
+      appId: "1:584369536278:web:21af80b8e3f4dd4e7a2189"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let currentUser = null;
+    let chatUser = new URLSearchParams(window.location.search).get("user");
+    let chatRef = null;
+
+    function login() {
+      const u = document.getElementById("username").value.trim();
+      const p = document.getElementById("password").value.trim();
+
+      // Simple static password check (for demo)
+      if(p === "12345" && u){
+        currentUser = u;
+        document.getElementById("loginDiv").style.display = "none";
+        document.getElementById("chatDiv").style.display = "block";
+        document.getElementById("chatWith").textContent = "Chat with: " + chatUser;
+        
+        chatRef = ref(db, "privateChats/" + currentUser + "_" + chatUser);
+        loadChat();
+      } else {
+        alert("Wrong username or password!");
+      }
+    }
+
+    function loadChat(){
+      const chatBox = document.getElementById("chat-box");
+      const msgInput = document.getElementById("msgInput");
+
+      onChildAdded(chatRef, (data) => {
+        const div = document.createElement("div");
+        div.textContent = data.val().sender + ": " + data.val().text;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+
+      window.sendMessage = () => {
+        let text = msgInput.value.trim();
+        if(text){
+          push(chatRef, { sender: currentUser, text });
+          msgInput.value = "";
+        }
+      };
+
+      window.resetChat = () => {
+        remove(chatRef);
+        chatBox.innerHTML = "";
+      };
+    }
+
+    window.login = login;
+  </script>
+</body>
+</html>
