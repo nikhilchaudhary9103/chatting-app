@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Lite Chat with Username</title>
+</head>
+<body>
+  <h3> Chat with bhaichara</h3>
+  <div id="chat-box" style="height:300px;overflow-y:auto;border:1px solid black;"></div>
+  
+  <input id="msgInput" type="text" placeholder="Type message">
+  <input id="imgInput" type="file" accept="image/*">
+  <button onclick="sendMessage()">Send</button>
+  <button onclick="resetChat()">Reset</button>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
+    import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDgD17HehIZ3RXWy9B6RbYT2Bl4HTZZzfI",
+      authDomain: "cloudstorage-bf72f.firebaseapp.com",
+      databaseURL: "https://cloudstorage-bf72f-default-rtdb.firebaseio.com",
+      projectId: "cloudstorage-bf72f",
+      storageBucket: "cloudstorage-bf72f.appspot.com",
+      messagingSenderId: "584369536278",
+      appId: "1:584369536278:web:21af80b8e3f4dd4e7a2189"
+    };
+
+    // Init Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const storage = getStorage(app);
+
+    const chatBox = document.getElementById("chat-box");
+    const msgInput = document.getElementById("msgInput");
+    const imgInput = document.getElementById("imgInput");
+    const chatRef = ref(db, "chat");
+
+    // Random username for each user
+    const username = "User" + Math.floor(Math.random() * 1000);
+
+    // Send message or image
+    async function sendMessage() {
+      let text = msgInput.value.trim();
+      let file = imgInput.files[0];
+
+      if (text) {
+        let tempDiv = document.createElement("div");
+        tempDiv.textContent = "(You) Sending: " + text;
+        chatBox.appendChild(tempDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        await push(chatRef, { type: "text", text, user: username });
+        msgInput.value = "";
+      } 
+      else if (file) {
+        let tempDiv = document.createElement("div");
+        tempDiv.textContent = "(You) Sending image...";
+        chatBox.appendChild(tempDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        const storageRef = sRef(storage, 'images/' + Date.now() + "_" + file.name);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        await push(chatRef, { type: "image", url, user: username });
+        imgInput.value = "";
+      }
+    }
+
+    // Display messages
+    onChildAdded(chatRef, (data) => {
+      const msg = data.val();
+      const div = document.createElement("div");
+
+      if (msg.type === "text") {
+        div.textContent = msg.user + ": " + msg.text;
+      } 
+      else if (msg.type === "image") {
+        div.textContent = msg.user + ": ";
+        const img = document.createElement("img");
+        img.src = msg.url;
+        img.style.maxWidth = "150px";
+        div.appendChild(img);
+      }
+
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    // Reset chat
+    function resetChat() {
+      remove(chatRef);
+      chatBox.innerHTML = "";
+    }
+
+    window.sendMessage = sendMessage;
+    window.resetChat = resetChat;
+  </script>
+</body>
+</html>
