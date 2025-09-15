@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>💀 Chat 💀</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Courier New", monospace;
+      color: #00ff00;
+      background: #000;
+      overflow: hidden;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -1;
+    }
+
+    h3 {
+      text-align: center;
+      font-size: 28px;
+      padding: 15px;
+      text-shadow: 0 0 10px #0f0, 0 0 20px #0ff, 0 0 30px #f00;
+      letter-spacing: 2px;
+      border-bottom: 2px solid #0f0;
+    }
+
+    #chat-box {
+      height: 300px;
+      overflow-y: auto;
+      border: 2px solid #0f0;
+      margin: 20px auto;
+      width: 80%;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      box-shadow: 0 0 20px #0ff inset, 0 0 20px #f00 inset;
+      border-radius: 8px;
+    }
+
+    #chat-box div {
+      padding: 5px 0;
+      animation: fadeIn 0.4s ease-in;
+      text-shadow: 0 0 5px #0f0, 0 0 10px #0ff;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    input, button {
+      background: #000;
+      border: 2px solid #0f0;
+      color: #0f0;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 5px;
+      margin: 5px;
+      outline: none;
+      font-family: "Courier New", monospace;
+      transition: 0.3s;
+    }
+
+    input::placeholder {
+      color: #0f0;
+      opacity: 0.6;
+    }
+
+    button:hover {
+      background: linear-gradient(90deg, #0f0, #0ff, #f00);
+      color: #000;
+      cursor: pointer;
+      box-shadow: 0 0 10px #0f0, 0 0 20px #0ff, 0 0 30px #f00;
+    }
+
+    img.chat-img {
+      max-width: 200px;
+      border: 1px solid #0f0;
+      border-radius: 5px;
+      display: block;
+      margin: 5px 0;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 12px;
+      color: #0f0;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="matrix"></canvas>
+
+  <h3>🔥 Chat  🔥</h3>
+  <div id="chat-box"></div>
+  
+  <div style="text-align:center;">
+    <input id="msgInput" type="text" placeholder="Type your secret message...">
+    <input id="imgInput" type="file" accept="image/*">
+    <button onclick="sendMessage()">Send</button>
+    <button onclick="resetChat()">Reset</button>
+  </div>
+
+  <div class="footer">[+] Connected to Secure Node 1337 [+]</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDgD17HehIZ3RXWy9B6RbYT2Bl4HTZZzfI",
+      authDomain: "cloudstorage-bf72f.firebaseapp.com",
+      databaseURL: "https://cloudstorage-bf72f-default-rtdb.firebaseio.com",
+      projectId: "cloudstorage-bf72f",
+      storageBucket: "cloudstorage-bf72f.appspot.com",
+      messagingSenderId: "584369536278",
+      appId: "1:584369536278:web:21af80b8e3f4dd4e7a2189"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const chatRef = ref(db, "publicChat");
+
+    const chatBox = document.getElementById("chat-box");
+    const msgInput = document.getElementById("msgInput");
+    const imgInput = document.getElementById("imgInput");
+
+    async function sendMessage() {
+      let text = msgInput.value.trim();
+      let file = imgInput.files[0];
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          push(chatRef, { image: e.target.result });
+        };
+        reader.readAsDataURL(file);
+        imgInput.value = "";
+      }
+
+      if (text) {
+        push(chatRef, { text });
+        msgInput.value = "";
+      }
+    }
+
+    onChildAdded(chatRef, (data) => {
+      const val = data.val();
+      const div = document.createElement("div");
+
+      if (val.text) {
+        div.textContent = "> " + val.text;
+      } 
+      else if (val.image) {
+        const img = document.createElement("img");
+        img.src = val.image;
+        img.className = "chat-img";
+        div.appendChild(img);
+      }
+
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    function resetChat() {
+      remove(chatRef);
+      chatBox.innerHTML = "";
+    }
+
+    window.sendMessage = sendMessage;
+    window.resetChat = resetChat;
+
+    // MATRIX BACKGROUND ANIMATION
+    const canvas = document.getElementById("matrix");
+    const ctx = canvas.getContext("2d");
+
+    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+
+    const letters = "01HACKERCHAT$#@";
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
+
+    const drops = [];
+    for (let x = 0; x < columns; x++) drops[x] = 1;
+
+    function draw() {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = ["#0f0", "#0ff", "#f00", "#00f"][Math.floor(Math.random()*4)];
+      ctx.font = fontSize + "px Courier";
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = letters.charAt(Math.floor(Math.random() * letters.length));
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+    }
+
+    setInterval(draw, 35);
+  </script>
+</body>
+</html>
