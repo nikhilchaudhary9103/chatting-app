@@ -1,0 +1,234 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tech summary data</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7c3aed}
+    body{background:linear-gradient(180deg,#071028 0%, #07172b 100%);font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;margin:0;color:#e6eef8}
+    .wrap{max-width:900px;margin:28px auto;padding:16px}
+    header{display:flex;align-items:center;gap:12px}
+    h1{font-size:20px;margin:0}
+    .controls{margin-left:auto;display:flex;gap:8px}
+    button{background:var(--card);border:1px solid rgba(255,255,255,0.03);color:var(--muted);padding:8px 12px;border-radius:10px;cursor:pointer}
+    .feed{margin-top:18px;display:flex;flex-direction:column;gap:14px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6);display:flex;gap:12px}
+    .avatar{width:84px;height:84px;border-radius:12px;flex:0 0 84px;overflow:hidden}
+    .hero{width:100%;height:180px;border-radius:10px;overflow:hidden;margin-top:10px}
+    .hero img{width:100%;height:100%;object-fit:cover;display:block}
+    .content{flex:1}
+    .title{font-weight:600;font-size:16px;margin-bottom:6px}
+    .meta{color:var(--muted);font-size:13px;margin-bottom:8px}
+    .desc{color:#dbe9ff;font-size:14px;line-height:1.45}
+    .actions{margin-top:10px;display:flex;gap:8px;align-items:center}
+    .pill{background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:999px;font-size:13px}
+    .loader{text-align:center;padding:18px;color:var(--muted)}
+    .small{font-size:12px;color:var(--muted)}
+    .faux-badge{background:linear-gradient(90deg,var(--accent),#4f46e5);padding:6px 10px;border-radius:999px;color:white;font-weight:600}
+    a.link{color:#9bd1ff;text-decoration:none}
+    footer{margin:26px 0;text-align:center;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <div class="faux-badge">Echo tech data</div>
+      </div>
+      <div>
+        <h1>Infinite Life Grow </h1>
+        <div class="small">Random words se content fetch hota hai. Images: Wikimedia thumbnails or Unsplash fallback.</div>
+      </div>
+      <div class="controls">
+        <input id="githubUser" placeholder="GitHub username (optional)" style="padding:8px;border-radius:8px;background:var(--card);border:1px solid rgba(255,255,255,0.03);color:var(--muted)" />
+        <button id="pauseBtn">Pause</button>
+        <button id="refreshBtn">Clear & Refresh</button>
+      </div>
+    </header><main class="feed" id="feed"></main>
+<div class="loader" id="loader">Scroll down for more — we'll keep adding.</div>
+<footer>Tip: Place a <code>words.txt</code> file in the same folder (one English word per line). If missing, built-in list will be used.</footer>
+
+  </div>  <script>
+    // Enhanced: images added.
+    // Sources for images:
+    // 1) Wikipedia REST summary returns 'thumbnail' (preferred)
+    // 2) GitHub repo owner avatar (if available)
+    // 3) Unsplash Source fallback: https://source.unsplash.com
+    // 4) ui-avatars as final fallback
+
+    const feed = document.getElementById('feed');
+    const loader = document.getElementById('loader');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const githubInput = document.getElementById('githubUser');
+
+    let words = ["History","Science","River","Moon","Computer","Python","Music","Temple","Art","Revolution","Sun","Garden","Castle","Phone","Cinema","Coffee","Train","Mountain","Ocean","Philosophy"];
+    let paused = false;
+    let fetching = false;
+    let useGitHub = false;
+    let githubRepos = [];
+    let repoIndex = 0;
+
+    const rand = (n) => Math.floor(Math.random()*n);
+    function randomTimeAgo(){
+      const mins = Math.floor(Math.random()*60);
+      const hours = Math.floor(Math.random()*24);
+      const days = Math.floor(Math.random()*30);
+      if(days>0) return `${days}d`;
+      if(hours>0) return `${hours}h`;
+      return `${mins}m`;
+    }
+    function randomLikes(){return Math.floor(Math.random()*5000)+5}
+
+    // try to load words.txt
+    fetch('words.txt').then(r=>{
+      if(r.ok) return r.text();
+      throw new Error('no words.txt');
+    }).then(txt=>{
+      const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      if(lines.length) words = lines;
+      console.log('Loaded words.txt,',words.length,'words')
+    }).catch(e=>{ console.log('words.txt not found — using built-in list') })
+
+    window.addEventListener('scroll', ()=>{
+      if(paused || fetching) return;
+      const atBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 300);
+      if(atBottom) loadMore();
+    })
+
+    pauseBtn.addEventListener('click', ()=>{
+      paused = !paused;
+      pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+      loader.textContent = paused ? 'Paused. Resume to continue.' : 'Scroll down for more — we keep adding.';
+    })
+
+    refreshBtn.addEventListener('click', ()=>{ feed.innerHTML=''; loader.textContent='Cleared feed — scroll down to repopulate.'; })
+
+    githubInput.addEventListener('change', async ()=>{
+      const name = githubInput.value.trim();
+      if(!name){ useGitHub=false; githubRepos=[]; repoIndex=0; return }
+      loader.textContent = 'Fetching GitHub repos...';
+      try{
+        const res = await fetch(`https://api.github.com/users/${encodeURIComponent(name)}/repos?per_page=100`);
+        if(!res.ok) throw new Error('GitHub fetch failed');
+        const arr = await res.json(); arr.sort((a,b)=> (b.stargazers_count||0) - (a.stargazers_count||0));
+        githubRepos = arr; repoIndex = 0; useGitHub = githubRepos.length>0;
+        loader.textContent = useGitHub ? `Loaded ${githubRepos.length} repos — they will be mixed into the feed.` : 'No repos found.';
+      }catch(err){ console.warn(err); loader.textContent='Could not load GitHub repos.'; useGitHub=false; githubRepos=[]; }
+    })
+
+    async function loadMore(){
+      fetching = true; loader.textContent = 'Loading more...';
+      const shouldUseRepo = useGitHub && Math.random() < 0.3 && repoIndex < githubRepos.length;
+      if(shouldUseRepo){ addRepoCard(githubRepos[repoIndex++]); fetching=false; loader.textContent='Scroll for more.'; return; }
+
+      const word = words[rand(words.length)];
+      const safeTitle = encodeURIComponent(word);
+      try{
+        const resp = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${safeTitle}`);
+        if(!resp.ok) throw new Error('no wiki');
+        const data = await resp.json(); addWikiCard(word, data);
+      }catch(err){ addFakeCard(word); }
+      fetching=false; loader.textContent='Scroll for more.';
+    }
+
+    function makeAvatar(name){ const n = encodeURIComponent(name); return `https://ui-avatars.com/api/?name=${n}&rounded=true&size=256`; }
+
+    function unsplashFor(q, w=800, h=400){
+      // source.unsplash.com returns a random image for the query; no API key needed but usage terms apply.
+      return `https://source.unsplash.com/${w}x${h}/?${encodeURIComponent(q)}`;
+    }
+
+    function addWikiCard(word, data){
+      const card = document.createElement('div'); card.className='card';
+      const avatar = document.createElement('div'); avatar.className='avatar';
+      // prefer Wikimedia thumbnail, else fallback to Unsplash or ui-avatars
+      let avatarSrc = makeAvatar(word);
+      if(data && data.thumbnail && data.thumbnail.source) avatarSrc = data.thumbnail.source;
+      const img = document.createElement('img'); img.src = avatarSrc; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; avatar.appendChild(img);
+
+      const content = document.createElement('div'); content.className='content';
+      const pageLink = data.content_urls && data.content_urls.desktop && data.content_urls.desktop.page ? data.content_urls.desktop.page : (`https://en.wikipedia.org/wiki/${encodeURIComponent(word)}`);
+      const title = document.createElement('div'); title.className='title'; title.innerHTML = `<a class='link' target='_blank' href='${pageLink}'>${data.title || word}</a> <span class='small'>· ${randomTimeAgo()}</span>`;
+
+      const meta = document.createElement('div'); meta.className='meta'; meta.textContent = `${(data.description || '').slice(0,120) || 'Wikipedia entry'} · ${randomLikes()} likes`;
+      const desc = document.createElement('div'); desc.className='desc'; desc.textContent = (data.extract && data.extract.length>0) ? data.extract : (data.description || 'No summary available.');
+
+      content.appendChild(title); content.appendChild(meta); content.appendChild(desc);
+
+      // hero image: try Wikimedia original image (if available) else Unsplash by word
+      if(data && data.originalimage && data.originalimage.source){
+        const hero = document.createElement('div'); hero.className='hero'; const himg = document.createElement('img'); himg.src = data.originalimage.source; hero.appendChild(himg); content.appendChild(hero);
+      } else if(data && data.thumbnail && data.thumbnail.source){
+        // sometimes thumbnail is small, give larger Unsplash hero for visual oomph
+        const hero = document.createElement('div'); hero.className='hero'; const himg = document.createElement('img'); himg.src = unsplashFor(word, 1200, 600); hero.appendChild(himg); content.appendChild(hero);
+      } else {
+        // fallback hero from Unsplash
+        const hero = document.createElement('div'); hero.className='hero'; const himg = document.createElement('img'); himg.src = unsplashFor(word, 1200, 600); hero.appendChild(himg); content.appendChild(hero);
+      }
+
+      const actions = document.createElement('div'); actions.className='actions';
+      const like = document.createElement('div'); like.className='pill'; like.textContent = `♥ ${randomLikes()}`;
+      const read = document.createElement('a'); read.className='pill link'; read.textContent='Read on Wikipedia'; read.href=pageLink; read.target='_blank';
+      actions.appendChild(like); actions.appendChild(read);
+      content.appendChild(actions);
+
+      card.appendChild(avatar); card.appendChild(content);
+      feed.appendChild(card);
+    }
+
+    function addRepoCard(repo){
+      const card = document.createElement('div'); card.className='card';
+      const avatar = document.createElement('div'); avatar.className='avatar';
+      const img = document.createElement('img');
+      // prefer GitHub owner's avatar
+      img.src = (repo.owner && repo.owner.avatar_url) ? repo.owner.avatar_url : makeAvatar(repo.name);
+      img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; avatar.appendChild(img);
+
+      const content = document.createElement('div'); content.className='content';
+      const title = document.createElement('div'); title.className='title'; title.innerHTML = `<a class='link' target='_blank' href='${repo.html_url}'>${repo.full_name}</a> <span class='small'>· ${randomTimeAgo()}</span>`;
+      const meta = document.createElement('div'); meta.className='meta'; meta.textContent = `${repo.language || '—'} · ★ ${repo.stargazers_count || 0} · Forks ${repo.forks_count || 0}`;
+      const desc = document.createElement('div'); desc.className='desc'; desc.textContent = repo.description || 'No description — but looks cool.';
+
+      content.appendChild(title); content.appendChild(meta); content.appendChild(desc);
+
+      // hero image for repos: try owner's avatar large or Unsplash by repo name
+      const hero = document.createElement('div'); hero.className='hero'; const himg = document.createElement('img');
+      himg.src = (repo.owner && repo.owner.avatar_url) ? repo.owner.avatar_url : unsplashFor(repo.name, 1200, 400);
+      hero.appendChild(himg); content.appendChild(hero);
+
+      const actions = document.createElement('div'); actions.className='actions';
+      const star = document.createElement('div'); star.className='pill'; star.textContent = `★ ${repo.stargazers_count || 0}`;
+      const view = document.createElement('a'); view.className='pill link'; view.textContent='Open on GitHub'; view.href = repo.html_url; view.target='_blank';
+      actions.appendChild(star); actions.appendChild(view);
+      content.appendChild(actions);
+
+      card.appendChild(avatar); card.appendChild(content);
+      feed.appendChild(card);
+    }
+
+    function addFakeCard(word){
+      const card = document.createElement('div'); card.className='card';
+      const avatar = document.createElement('div'); avatar.className='avatar';
+      const img = document.createElement('img'); img.src = unsplashFor(word, 400, 400); img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; avatar.appendChild(img);
+
+      const content = document.createElement('div'); content.className='content';
+      const title = document.createElement('div'); title.className='title'; title.innerHTML = `${word} <span class='small'>· ${randomTimeAgo()}</span>`;
+      const meta = document.createElement('div'); meta.className='meta'; meta.textContent = `Auto-generated · ${randomLikes()} likes`;
+      const desc = document.createElement('div'); desc.className='desc'; desc.textContent = `Yeh card ${word} par based ek fake summary hai. Thoda creative lagane ke liye yeh text random generate hua hai — par mast dikhna chahiye na?`;
+
+      content.appendChild(title); content.appendChild(meta); content.appendChild(desc);
+      const actions = document.createElement('div'); actions.className='actions'; const like = document.createElement('div'); like.className='pill'; like.textContent = `♥ ${randomLikes()}`; actions.appendChild(like); content.appendChild(actions);
+
+      // hero image
+      const hero = document.createElement('div'); hero.className='hero'; const himg = document.createElement('img'); himg.src = unsplashFor(word, 1200, 600); hero.appendChild(himg); content.appendChild(hero);
+
+      card.appendChild(avatar); card.appendChild(content); feed.appendChild(card);
+    }
+
+    // preload a few
+    for(let i=0;i<6;i++) loadMore();
+  </script></body>
+</html>
