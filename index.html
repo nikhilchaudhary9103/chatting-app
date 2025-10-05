@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NikhilTechSpace — Mast Tech Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#030515; --card:#071226; --muted:#9fb0c8; --accent:#00d4ff; --neon:#7c3aed;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:#000;color:#e6f3ff}
+  /* VIDEO BACKDROP */
+  .bg-video-wrap{position:fixed;inset:0;z-index:0;overflow:hidden}
+  .bg-video-wrap video{
+    width:100%;height:100%;object-fit:cover; filter:brightness(0.45) contrast(1.05) saturate(1.05);
+  }
+  /* subtle moving noise overlay for techy vibe */
+  .noise {
+    position:fixed; inset:0; z-index:1; pointer-events:none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="n"><feTurbulence baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.03"/></svg>');
+    mix-blend-mode:screen;
+  }
+  /* MAIN LAYOUT */
+  .app{
+    position:relative; z-index:2; max-width:1100px; margin:28px auto; padding:20px; display:grid; gap:18px;
+    grid-template-columns: 1fr 380px;
+  }
+  header.top{
+    grid-column:1/-1; display:flex; align-items:center; gap:14px; justify-content:space-between;
+    color:#cfefff;
+  }
+  .brand{
+    display:flex;align-items:center;gap:12px;
+  }
+  .logo{
+    width:64px;height:64px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#020813,rgba(255,255,255,0.02));box-shadow:0 6px 20px rgba(2,6,23,0.6);
+    font-family:Orbitron,monospace;font-weight:700;color:var(--accent);font-size:18px;
+  }
+  /* blinking name */
+  .blinkName{
+    font-family:Orbitron,monospace;font-weight:700;font-size:22px;
+    color:var(--accent); text-shadow:0 0 12px rgba(0,212,255,0.12), 0 0 28px rgba(124,58,237,0.08);
+    animation: blinkGlow 1.6s infinite;
+  }
+  @keyframes blinkGlow{
+    0%{opacity:1; text-shadow:0 0 8px rgba(0,212,255,0.06);}
+    40%{opacity:0.35; text-shadow:0 0 24px rgba(124,58,237,0.55);}
+    70%{opacity:1; text-shadow:0 0 40px rgba(0,212,255,0.9);}
+    100%{opacity:1;}
+  }
+
+  /* SEARCH + CONTROLS */
+  .controls{display:flex;gap:8px;align-items:center}
+  .searchBox{display:flex; gap:8px; background:rgba(255,255,255,0.03); padding:8px; border-radius:12px; border:1px solid rgba(255,255,255,0.04)}
+  input.search{background:transparent;border:none;outline:none;color:#e6eef8;padding:8px 6px;width:320px;font-size:15px}
+  button.btn{background:linear-gradient(90deg,var(--neon),#4f46e5);color:white;border:none;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+  .hint{color:var(--muted);font-size:13px}
+
+  /* FEED / SIDEBAR */
+  .feed{background:transparent; padding:6px; display:flex;flex-direction:column;gap:14px; overflow:visible}
+  .card{display:flex;gap:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.025);box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+  .avatar{width:84px;height:84px;border-radius:10px;overflow:hidden;flex:0 0 84px}
+  .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  .content{flex:1}
+  .title{font-weight:700;color:#eaf6ff;margin-bottom:6px}
+  .meta{color:var(--muted);font-size:13px;margin-bottom:8px}
+  .desc{color:#d8f0ff;font-size:14px;line-height:1.45}
+
+  /* hero images */
+  .hero{width:100%;height:180px;border-radius:10px;overflow:hidden;margin-top:10px}
+  .hero img{width:100%;height:100%;object-fit:cover;display:block}
+
+  /* SIDEBAR */
+  aside.sidebar{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03); height:calc(100vh - 120px); overflow:auto}
+  .small{font-size:13px;color:var(--muted)}
+  .searchResults{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .resultItem{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;font-size:14px;color:#dff;cursor:default}
+
+  /* loader */
+  .loader{text-align:center;color:var(--muted);padding:12px}
+
+  /* electric effect - svg overlay */
+  .electric-overlay{position:fixed;inset:0;pointer-events:none;z-index:1;mix-blend-mode:screen}
+  svg.elec{width:100%;height:100%}
+  .spark { fill: none; stroke: #8efcff; stroke-width:2.4; stroke-linecap:round; filter: drop-shadow(0 0 6px rgba(126,230,255,0.9)); opacity:0.9 }
+
+  /* responsive */
+  @media (max-width:1000px){
+    .app{grid-template-columns:1fr; padding:12px}
+    aside.sidebar{height:auto}
+    input.search{width:160px}
+  }
+</style>
+</head>
+<body>
+
+<!-- Background video - put your video.mp4 in same folder -->
+<div class="bg-video-wrap">
+  <video autoplay muted loop playsinline id="bgVideo">
+    <source src="video.mp4" type="video/mp4">
+    <!-- fallback poster -->
+  </video>
+</div>
+<div class="noise"></div>
+
+<!-- electric svg overlay -->
+<div class="electric-overlay" aria-hidden="true">
+  <svg class="elec" viewBox="0 0 1600 900" preserveAspectRatio="none">
+    <!-- animated electric lines (3 layers) -->
+    <path id="e1" class="spark" d="M0 120 C300 40 600 200 900 120 C1200 40 1400 140 1600 60"></path>
+    <path id="e2" class="spark" d="M0 320 C200 260 520 380 800 300 C1080 220 1300 360 1600 300"></path>
+    <path id="e3" class="spark" d="M0 520 C240 460 540 540 800 480 C1060 420 1280 560 1600 500"></path>
+    <!-- small animated particles -->
+    <g id="sparks" opacity="0.95"></g>
+    <defs>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="6" result="coloredBlur"/> 
+        <feMerge> 
+          <feMergeNode in="coloredBlur"/> 
+          <feMergeNode in="SourceGraphic"/> 
+        </feMerge> 
+      </filter>
+    </defs>
+  </svg>
+</div>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">NTS</div>
+      <div>
+        <div class="blinkName">NikhilTechSpace</div>
+        <div class="small">Tech feed • Wikipedia + GitHub + Local words • background video</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="searchBox">
+        <input id="searchInput" class="search" placeholder="Search world.txt — type & press Enter" />
+        <button id="searchBtn" class="btn">Search</button>
+      </div>
+      <div style="width:12px"></div>
+      <input id="githubUser" placeholder="GitHub username (optional)" style="padding:8px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);color:#e6eef8" />
+    </div>
+  </header>
+
+  <main class="feed" id="feed">
+    <!-- infinite feed cards will append here -->
+  </main>
+
+  <aside class="sidebar">
+    <div class="small">Search results from <strong>world.txt</strong>:</div>
+    <div id="results" class="searchResults"></div>
+
+    <div style="height:10px"></div>
+    <div class="small">Controls:</div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="pauseBtn" class="btn" style="background:linear-gradient(90deg,#7c3aed,#00d4ff)">Pause Feed</button>
+      <button id="clearBtn" class="btn" style="background:linear-gradient(90deg,#ff7a7a,#ffb86b)">Clear Feed</button>
+    </div>
+
+    <div style="height:14px"></div>
+    <div class="small">Tip: Place <code>video.mp4</code> and <code>world.txt</code> in same folder. One word/line per line in world.txt.</div>
+    <div style="height:12px"></div>
+    <div class="loader" id="loader">Loading feed…</div>
+  </aside>
+</div>
+
+<script>
+/* ---------- ELECTRIC ANIMATIONS (sparks + wave motion) ---------- */
+const e1 = document.getElementById('e1'), e2 = document.getElementById('e2'), e3 = document.getElementById('e3');
+const sparksGroup = document.getElementById('sparks');
+function animatePaths(){
+  // subtle dash offset animation for "flow"
+  [e1,e2,e3].forEach((p,i)=>{
+    p.style.strokeDasharray = 500;
+    p.style.strokeDashoffset = (i%2?0:1000);
+    p.style.transition = `stroke-dashoffset ${4+i*1.6}s linear`;
+    setInterval(()=> {
+      p.style.strokeDashoffset = (parseFloat(p.style.strokeDashoffset) || 0) + (i%2? -900 : 900);
+    }, 3000 + i*300);
+  });
+}
+function spawnSparks(){
+  // random small circles along width
+  for(let i=0;i<8;i++){
+    const cx = Math.random()*1600;
+    const cy = 60 + Math.random()*700;
+    const r = 1 + Math.random()*2.6;
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx', cx);
+    circle.setAttribute('cy', cy);
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill','#8efcff');
+    circle.setAttribute('opacity', Math.random()*0.9);
+    circle.style.filter = 'url(#glow)';
+    sparksGroup.appendChild(circle);
+    // fade & remove
+    setTimeout(()=> {
+      circle.animate([{opacity:circle.getAttribute('opacity')},{opacity:0}], {duration:2400+Math.random()*2600,easing:'ease-out'});
+      setTimeout(()=> circle.remove(), 2600+Math.random()*2600);
+    }, Math.random()*2200);
+  }
+}
+animatePaths(); setInterval(spawnSparks, 1400);
+
+/* ---------- CORE FEED + SEARCH ---------- */
+const feed = document.getElementById('feed');
+const loader = document.getElementById('loader');
+const results = document.getElementById('results');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const githubInput = document.getElementById('githubUser');
+const pauseBtn = document.getElementById('pauseBtn');
+const clearBtn = document.getElementById('clearBtn');
+
+let words = ["History","Science","River","Moon","Computer","Python","Music","Temple","Art","Revolution","Sun","Garden","Castle","Phone","Cinema","Coffee","Train","Mountain","Ocean","Philosophy"];
+let fetching=false, paused=false;
+let githubRepos = [], useGitHub=false, repoIndex=0;
+
+const rand = n => Math.floor(Math.random()*n);
+function randomTimeAgo(){ const mins = Math.floor(Math.random()*60); const hrs = Math.floor(Math.random()*24); const days = Math.floor(Math.random()*30); if(days>0) return days+'d'; if(hrs>0) return hrs+'h'; return mins+'m'; }
+function randomLikes(){ return Math.floor(Math.random()*9000)+3; }
+
+/* try to load world.txt (user's local file) */
+fetch('world.txt').then(r=>{
+  if(!r.ok) throw new Error('no world.txt'); return r.text();
+}).then(txt=>{
+  const lines = txt.split(/\\r?\\n/).map(s=>s.trim()).filter(Boolean);
+  if(lines.length) words = lines;
+  console.log('Loaded world.txt', words.length);
+}).catch(e=>{ console.log('world.txt not found — using built-in list') });
+
+/* GitHub loader */
+githubInput.addEventListener('change', async ()=>{
+  const name = githubInput.value.trim();
+  if(!name){ useGitHub=false; githubRepos=[]; repoIndex=0; loader.textContent=''; return; }
+  loader.textContent = 'Fetching GitHub repos...';
+  try{
+    const res = await fetch(`https://api.github.com/users/${encodeURIComponent(name)}/repos?per_page=100`);
+    if(!res.ok) throw new Error('GitHub fetch failed');
+    const arr = await res.json();
+    arr.sort((a,b)=> (b.stargazers_count||0) - (a.stargazers_count||0));
+    githubRepos = arr; repoIndex=0; useGitHub = githubRepos.length>0;
+    loader.textContent = useGitHub ? `Loaded ${githubRepos.length} repos` : 'No repos found';
+  }catch(err){
+    console.warn(err); loader.textContent='Could not load GitHub repos'; useGitHub=false; githubRepos=[];
+  }
+});
+
+/* infinite scroll trigger */
+window.addEventListener('scroll', ()=> {
+  if(paused || fetching) return;
+  const atBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 300);
+  if(atBottom) loadMore();
+});
+
+/* buttons */
+pauseBtn.addEventListener('click', ()=> {
+  paused = !paused;
+  pauseBtn.textContent = paused ? 'Resume Feed' : 'Pause Feed';
+});
+clearBtn.addEventListener('click', ()=> { feed.innerHTML=''; loader.textContent='Cleared feed'; });
+
+/* search world.txt */
+searchBtn.addEventListener('click', doSearch);
+searchInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSearch(); });
+
+function doSearch(){
+  const q = (searchInput.value || '').trim().toLowerCase();
+  results.innerHTML = '';
+  if(!q){ results.innerHTML = '<div class="small">Type something to search inside world.txt</div>'; return; }
+  const found = words.filter(w => w.toLowerCase().includes(q));
+  if(found.length===0){
+    results.innerHTML = `<div class="resultItem">No match for "<strong>${escapeHtml(q)}</strong>"</div>`;
+  } else {
+    results.innerHTML = '';
+    found.slice(0,80).forEach(w=>{
+      const el = document.createElement('div'); el.className='resultItem'; el.textContent = w;
+      results.appendChild(el);
+    });
+    // optional: push first matched word into feed to generate a card
+    if(found[0]) addSeedCard(found[0]);
+  }
+}
+
+/* simple HTML escape */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+/* helpers for images */
+function makeAvatar(name){ const n=encodeURIComponent(name); return `https://ui-avatars.com/api/?name=${n}&rounded=true&size=256`; }
+function unsplashFor(q,w=1200,h=600){ return `https://source.unsplash.com/${w}x${h}/?${encodeURIComponent(q)}`; }
+
+/* card creators */
+function addWikiCard(word, data){
+  const card = document.createElement('div'); card.className='card';
+  const avatar = document.createElement('div'); avatar.className='avatar';
+  let avatarSrc = makeAvatar(word);
+  if(data && data.thumbnail && data.thumbnail.source) avatarSrc = data.thumbnail.source;
+  const aimg = document.createElement('img'); aimg.src = avatarSrc; avatar.appendChild(aimg);
+
+  const cont = document.createElement('div'); cont.className='content';
+  const pageLink = data && data.content_urls && data.content_urls.desktop && data.content_urls.desktop.page ? data.content_urls.desktop.page : `https://en.wikipedia.org/wiki/${encodeURIComponent(word)}`;
+  const title = document.createElement('div'); title.className='title';
+  title.innerHTML = `<a target="_blank" class="link" href="${pageLink}" style="color:inherit;text-decoration:none">${escapeHtml(data && data.title ? data.title : word)} <span style="color:var(--muted);font-size:13px"> · ${randomTimeAgo()}</span></a>`;
+  const meta = document.createElement('div'); meta.className='meta'; meta.textContent = `${(data.description||'Wikipedia entry').slice(0,120)} · ${randomLikes()} likes`;
+  const desc = document.createElement('div'); desc.className='desc'; desc.textContent = (data.extract && data.extract.length>0) ? data.extract : (data.description || 'No summary');
+  cont.appendChild(title); cont.appendChild(meta); cont.appendChild(desc);
+
+  // hero
+  const hero = document.createElement('div'); hero.className='hero';
+  const himg = document.createElement('img');
+  if(data && data.originalimage && data.originalimage.source) himg.src = data.originalimage.source;
+  else himg.src = unsplashFor(word,1200,600);
+  hero.appendChild(himg); cont.appendChild(hero);
+
+  // actions
+  const actions = document.createElement('div'); actions.className='meta';
+  actions.style.marginTop = '8px'; actions.textContent = `♥ ${randomLikes()} · Read on Wikipedia`;
+  cont.appendChild(actions);
+
+  card.appendChild(avatar); card.appendChild(cont); feed.appendChild(card);
+}
+
+function addRepoCard(repo){
+  const card = document.createElement('div'); card.className='card';
+  const avatar = document.createElement('div'); avatar.className='avatar';
+  const aimg = document.createElement('img'); aimg.src = (repo.owner && repo.owner.avatar_url) ? repo.owner.avatar_url : makeAvatar(repo.name); avatar.appendChild(aimg);
+
+  const cont = document.createElement('div'); cont.className='content';
+  const title = document.createElement('div'); title.className='title';
+  title.innerHTML = `<a target="_blank" class="link" href="${repo.html_url}" style="color:inherit;text-decoration:none">${escapeHtml(repo.full_name)} <span style="color:var(--muted);font-size:13px"> · ${randomTimeAgo()}</span></a>`;
+  const meta = document.createElement('div'); meta.className='meta'; meta.textContent = `${repo.language || '—'} · ★ ${repo.stargazers_count || 0} · Forks ${repo.forks_count || 0}`;
+  const desc = document.createElement('div'); desc.className='desc'; desc.textContent = repo.description || 'No description.';
+
+  cont.appendChild(title); cont.appendChild(meta); cont.appendChild(desc);
+
+  const hero = document.createElement('div'); hero.className='hero';
+  const himg = document.createElement('img'); himg.src = (repo.owner && repo.owner.avatar_url) ? repo.owner.avatar_url : unsplashFor(repo.name,1200,400);
+  hero.appendChild(himg); cont.appendChild(hero);
+
+  card.appendChild(avatar); card.appendChild(cont); feed.appendChild(card);
+}
+
+function addFakeCard(word){
+  const card = document.createElement('div'); card.className='card';
+  const avatar = document.createElement('div'); avatar.className='avatar';
+  const aimg = document.createElement('img'); aimg.src = unsplashFor(word,400,400); avatar.appendChild(aimg);
+
+  const cont = document.createElement('div'); cont.className='content';
+  const title = document.createElement('div'); title.className='title'; title.textContent = word + ' · ' + randomTimeAgo();
+  const meta = document.createElement('div'); meta.className='meta'; meta.textContent = 'Auto-generated · ' + randomLikes() + ' likes';
+  const desc = document.createElement('div'); desc.className='desc'; desc.textContent = `Yeh card ${word} par based ek creative summary hai — NikhilTechSpace vibes.`;
+
+  cont.appendChild(title); cont.appendChild(meta); cont.appendChild(desc);
+  const hero = document.createElement('div'); hero.className='hero';
+  const himg = document.createElement('img'); himg.src = unsplashFor(word,1200,600);
+  hero.appendChild(himg); cont.appendChild(hero);
+
+  card.appendChild(avatar); card.appendChild(cont); feed.appendChild(card);
+}
+
+/* add seed card from search */
+function addSeedCard(word){
+  // try wiki first
+  fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(word)}`)
+    .then(r=> r.ok ? r.json() : Promise.reject('no wiki'))
+    .then(data=> addWikiCard(word, data))
+    .catch(()=> addFakeCard(word));
+}
+
+/* infinite load */
+async function loadMore(){
+  fetching = true; loader.textContent = 'Loading more...';
+  // mix: 65% wiki, 25% github if available, rest fake
+  const useRepo = useGitHub && Math.random() < 0.25 && repoIndex < githubRepos.length;
+  if(useRepo){
+    addRepoCard(githubRepos[repoIndex++]);
+    fetching=false; loader.textContent='Scroll for more'; return;
+  }
+  const w = words[rand(words.length)];
+  try{
+    const resp = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(w)}`);
+    if(!resp.ok) throw 'no wiki';
+    const data = await resp.json();
+    addWikiCard(w,data);
+  }catch(e){
+    addFakeCard(w);
+  }
+  fetching=false; loader.textContent='Scroll for more';
+}
+
+/* preload some items on load */
+for(let i=0;i<6;i++) loadMore();
+
+/* small UX: click on result item adds to feed */
+results.addEventListener('click', (ev)=>{
+  const t = ev.target;
+  if(t.classList.contains('resultItem')) addSeedCard(t.textContent);
+});
+
+/* ensure video plays on mobile by trying to play after user interaction (most browsers require gesture) */
+document.addEventListener('click', ()=> {
+  const v = document.getElementById('bgVideo');
+  if(v && v.paused) { v.play().catch(()=>{}); }
+}, {once:true});
+
+</script>
+</body>
+    </html>
